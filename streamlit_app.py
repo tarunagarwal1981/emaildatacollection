@@ -36,16 +36,19 @@ def read_docx(file):
         full_text.append(para.text)
     return "\n".join(full_text)
 
-def separate_threads(content, model, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
+def separate_threads(content, model, user_input, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
     max_tokens = 4000
     if len(content) > max_tokens * 4:
         content = content[:max_tokens * 4]
         st.warning("Content was truncated due to length. Analysis may be incomplete.")
 
-    prompt = """
-    The following content contains multiple email threads related to machinery defects, incidents, or troubles. 
-    Please separate these threads and return them as a numbered list. Each item in the list should be a complete thread.
+    prompt = f"""
+    The following content may contain multiple email threads related to machinery defects, incidents, or troubles. 
+    In case multiple threads are there please separate these threads and return them as a numbered list. Each item in the list should be a complete thread.
     Use your intelligence to identify where one thread ends and another begins.
+
+    Additional instructions from the user:
+    {user_input}
 
     Content to separate:
     {content}
@@ -57,7 +60,7 @@ def separate_threads(content, model, temperature=0.7, top_p=1.0, frequency_penal
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": prompt.format(content=content)}
+                    {"role": "user", "content": prompt}
                 ],
                 max_tokens=1500,
                 temperature=temperature,
@@ -68,7 +71,7 @@ def separate_threads(content, model, temperature=0.7, top_p=1.0, frequency_penal
             return response.choices[0].message.content.split("\n")
         elif model == "Claude":
             response = anthropic_client.completions.create(
-                prompt=f"{anthropic.HUMAN_PROMPT} {prompt.format(content=content)}{anthropic.AI_PROMPT}",
+                prompt=f"{anthropic.HUMAN_PROMPT} {prompt}{anthropic.AI_PROMPT}",
                 model="claude-2",
                 max_tokens_to_sample=1500,
                 temperature=temperature,
@@ -79,8 +82,8 @@ def separate_threads(content, model, temperature=0.7, top_p=1.0, frequency_penal
         st.error(f"Error in API request: {str(e)}")
         return []
 
-def analyze_thread(thread, model, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
-    prompt = """
+def analyze_thread(thread, model, user_input, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
+    prompt = f"""
     You are an experienced reliability engineer. Analyze the following email thread related to machinery defects, incidents, or troubles, and format the data under these headings:
     - Failure Mode
     - Failure Symptom
@@ -96,7 +99,12 @@ def analyze_thread(thread, model, temperature=0.7, top_p=1.0, frequency_penalty=
     Failure Effect: The resulting impact or consequence of a failure mode on the system's performance or operation. (Example: "Reduced engine power" or "Loss of hydraulic pressure")
 
     Failure Cause: The underlying reason or mechanism that leads to the occurrence of a failure mode. (Example: "Wear and tear" or "Contaminated fuel")
+
     Create a sort of detailed incident case study out of each thread. Also include timeline of events if it is available in mail threads. Extract as much meaningful data as possible from the email threads and put it in the case study.
+
+    Additional instructions from the user:
+    {user_input}
+
     Email thread to analyze:
     {thread}
     """
@@ -106,7 +114,7 @@ def analyze_thread(thread, model, temperature=0.7, top_p=1.0, frequency_penalty=
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt.format(thread=thread)}
+                {"role": "user", "content": prompt}
             ],
             max_tokens=1000,
             temperature=temperature,
@@ -117,7 +125,7 @@ def analyze_thread(thread, model, temperature=0.7, top_p=1.0, frequency_penalty=
         return response.choices[0].message.content
     elif model == "Claude":
         response = anthropic_client.completions.create(
-            prompt=f"{anthropic.HUMAN_PROMPT} {prompt.format(thread=thread)}{anthropic.AI_PROMPT}",
+            prompt=f"{anthropic.HUMAN_PROMPT} {prompt}{anthropic.AI_PROMPT}",
             model="claude-2",
             max_tokens_to_sample=1000,
             temperature=temperature,
@@ -130,6 +138,10 @@ def main():
 
     # Add model selection
     model = st.sidebar.selectbox("Select Model", ["OpenAI", "Claude"])
+
+    # Add user input text area
+    user_input = st.text_area("Additional Instructions or Context", 
+                              "Please provide any additional instructions or context for the analysis here.")
 
     uploaded_file = st.file_uploader("Choose a DOCX file", type="docx")
 
@@ -153,7 +165,7 @@ def main():
 
         if st.button("Analyze"):
             with st.spinner("Separating threads..."):
-                threads = separate_threads(content, model, temperature, top_p, frequency_penalty, presence_penalty)
+                threads = separate_threads(content, model, user_input, temperature, top_p, frequency_penalty, presence_penalty)
                 
             st.write(f"Found {len(threads)} threads.")
             
@@ -162,7 +174,7 @@ def main():
                 st.write(thread)
                 
                 with st.spinner(f"Analyzing thread {i}..."):
-                    analysis = analyze_thread(thread, model, temperature, top_p, frequency_penalty, presence_penalty)
+                    analysis = analyze_thread(thread, model, user_input, temperature, top_p, frequency_penalty, presence_penalty)
                     st.write("FMEA Analysis:")
                     st.write(analysis)
                 
