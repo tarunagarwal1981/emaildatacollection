@@ -1,22 +1,33 @@
 import streamlit as st
 import docx
 import openai
+import anthropic
 import os
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-# Initialize OpenAI API
-def get_api_key():
+# Initialize API keys
+def get_openai_api_key():
     if 'openai' in st.secrets:
         return st.secrets['openai']['api_key']
     api_key = os.getenv('OPENAI_API_KEY')
     if api_key is None:
-        raise ValueError("API key not found. Set OPENAI_API_KEY as an environment variable or in Streamlit secrets.")
+        raise ValueError("OpenAI API key not found. Set OPENAI_API_KEY as an environment variable or in Streamlit secrets.")
     return api_key
 
-openai.api_key = get_api_key()
+def get_anthropic_api_key():
+    if 'anthropic' in st.secrets:
+        return st.secrets['anthropic']['api_key']
+    api_key = os.getenv('ANTHROPIC_API_KEY')
+    if api_key is None:
+        raise ValueError("Anthropic API key not found. Set ANTHROPIC_API_KEY as an environment variable or in Streamlit secrets.")
+    return api_key
+
+# Set up clients
+openai.api_key = get_openai_api_key()
+anthropic_client = anthropic.Anthropic(api_key=get_anthropic_api_key())
 
 def read_docx(file):
     doc = docx.Document(file)
@@ -25,7 +36,7 @@ def read_docx(file):
         full_text.append(para.text)
     return "\n".join(full_text)
 
-def separate_threads(content, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
+def separate_threads(content, model, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
     max_tokens = 4000
     if len(content) > max_tokens * 4:
         content = content[:max_tokens * 4]
@@ -41,24 +52,36 @@ def separate_threads(content, temperature=0.7, top_p=1.0, frequency_penalty=0.0,
     """
 
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt.format(content=content)}
-            ],
-            max_tokens=1500,
-            temperature=temperature,
-            top_p=top_p,
-            frequency_penalty=frequency_penalty,
-            presence_penalty=presence_penalty
-        )
-        return response.choices[0].message.content.split("\n")
-    except openai.error.InvalidRequestError as e:
+        if model == "OpenAI":
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": prompt.format(content=content)}
+                ],
+                max_tokens=1500,
+                temperature=temperature,
+                top_p=top_p,
+                frequency_penalty=frequency_penalty,
+                presence_penalty=presence_penalty
+            )
+            return response.choices[0].message.content.split("\n")
+        elif model == "Claude":
+            response = anthropic_client.completion(
+                prompt=f"Human: {prompt.format(content=content)}\n\nAssistant:",
+                model="claude-2",
+                max_tokens_to_sample=1500,
+                temperature=temperature,
+                top_p=top_p,
+                frequency_penalty=frequency_penalty,
+                presence_penalty=presence_penalty
+            )
+            return response.completion.split("\n")
+    except Exception as e:
         st.error(f"Error in API request: {str(e)}")
         return []
 
-def analyze_thread(thread, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
+def analyze_thread(thread, model, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
     prompt = """
     You are an experienced reliability engineer. Analyze the following email thread related to machinery defects, incidents, or troubles, and format the data under these headings:
     - Failure Mode
@@ -80,23 +103,37 @@ def analyze_thread(thread, temperature=0.7, top_p=1.0, frequency_penalty=0.0, pr
     {thread}
     """
 
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt.format(thread=thread)}
-        ],
-        max_tokens=1000,
-        temperature=temperature,
-        top_p=top_p,
-        frequency_penalty=frequency_penalty,
-        presence_penalty=presence_penalty
-    )
-
-    return response.choices[0].message.content
+    if model == "OpenAI":
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt.format(thread=thread)}
+            ],
+            max_tokens=1000,
+            temperature=temperature,
+            top_p=top_p,
+            frequency_penalty=frequency_penalty,
+            presence_penalty=presence_penalty
+        )
+        return response.choices[0].message.content
+    elif model == "Claude":
+        response = anthropic_client.completion(
+            prompt=f"Human: {prompt.format(thread=thread)}\n\nAssistant:",
+            model="claude-2",
+            max_tokens_to_sample=1000,
+            temperature=temperature,
+            top_p=top_p,
+            frequency_penalty=frequency_penalty,
+            presence_penalty=presence_penalty
+        )
+        return response.completion
 
 def main():
     st.title("Multi-Thread FMEA Analyzer")
+
+    # Add model selection
+    model = st.sidebar.selectbox("Select Model", ["OpenAI", "Claude"])
 
     uploaded_file = st.file_uploader("Choose a DOCX file", type="docx")
 
@@ -114,7 +151,7 @@ def main():
 
         if st.button("Analyze"):
             with st.spinner("Separating threads..."):
-                threads = separate_threads(content, temperature, top_p, frequency_penalty, presence_penalty)
+                threads = separate_threads(content, model, temperature, top_p, frequency_penalty, presence_penalty)
                 
             st.write(f"Found {len(threads)} threads.")
             
@@ -123,7 +160,7 @@ def main():
                 st.write(thread)
                 
                 with st.spinner(f"Analyzing thread {i}..."):
-                    analysis = analyze_thread(thread, temperature, top_p, frequency_penalty, presence_penalty)
+                    analysis = analyze_thread(thread, model, temperature, top_p, frequency_penalty, presence_penalty)
                     st.write("FMEA Analysis:")
                     st.write(analysis)
                 
