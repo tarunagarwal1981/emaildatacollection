@@ -25,10 +25,9 @@ def read_docx(file):
         full_text.append(para.text)
     return "\n".join(full_text)
 
-def separate_threads(content):
-    # Truncate content if it's too long
-    max_tokens = 4000  # Adjust this value as needed
-    if len(content) > max_tokens * 4:  # Assuming 1 token ≈ 4 characters
+def separate_threads(content, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
+    max_tokens = 4000
+    if len(content) > max_tokens * 4:
         content = content[:max_tokens * 4]
         st.warning("Content was truncated due to length. Analysis may be incomplete.")
 
@@ -48,14 +47,18 @@ def separate_threads(content):
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt.format(content=content)}
             ],
-            max_tokens=1500
+            max_tokens=1500,
+            temperature=temperature,
+            top_p=top_p,
+            frequency_penalty=frequency_penalty,
+            presence_penalty=presence_penalty
         )
         return response.choices[0].message.content.split("\n")
     except openai.error.InvalidRequestError as e:
         st.error(f"Error in API request: {str(e)}")
         return []
 
-def analyze_thread(thread):
+def analyze_thread(thread, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
     prompt = """
     You are an experienced reliability engineer. Analyze the following email thread related to machinery defects, incidents, or troubles, and format the data under these headings:
     - Failure Mode
@@ -83,7 +86,11 @@ def analyze_thread(thread):
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": prompt.format(thread=thread)}
         ],
-        max_tokens=1000
+        max_tokens=1000,
+        temperature=0.7,
+        top_p=1,
+        #frequency_penalty=frequency_penalty,
+        #presence_penalty=presence_penalty
     )
 
     return response.choices[0].message.content
@@ -98,9 +105,16 @@ def main():
         st.write("File contents:")
         st.write(content)
 
+        # Add sliders for LLM parameters
+        st.sidebar.header("LLM Parameters")
+        temperature = st.sidebar.slider("Temperature", 0.0, 1.0, 0.7, 0.1)
+        top_p = st.sidebar.slider("Top P", 0.0, 1.0, 1.0, 0.1)
+        frequency_penalty = st.sidebar.slider("Frequency Penalty", 0.0, 2.0, 0.0, 0.1)
+        presence_penalty = st.sidebar.slider("Presence Penalty", 0.0, 2.0, 0.0, 0.1)
+
         if st.button("Analyze"):
             with st.spinner("Separating threads..."):
-                threads = separate_threads(content)
+                threads = separate_threads(content, temperature, top_p, frequency_penalty, presence_penalty)
                 
             st.write(f"Found {len(threads)} threads.")
             
@@ -109,7 +123,7 @@ def main():
                 st.write(thread)
                 
                 with st.spinner(f"Analyzing thread {i}..."):
-                    analysis = analyze_thread(thread)
+                    analysis = analyze_thread(thread, temperature, top_p, frequency_penalty, presence_penalty)
                     st.write("FMEA Analysis:")
                     st.write(analysis)
                 
