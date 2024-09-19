@@ -38,40 +38,100 @@ def read_docx(file):
 
 def analyze_thread(thread, model, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
     prompt = f"""
-    Prompt for FMECA and Incident Case Study Generation
-Context: You are tasked with generating a detailed FMECA (Failure Modes, Effects, and Criticality Analysis) for a marine vessel experiencing a specific failure mode, accompanied by an incident case study detailing the failure, its root causes, and corrective actions taken. The case involves the vessel's Main Engine (ME) failure to start in astern, observed during critical maneuvers. The FMECA should focus on identifying the root causes, effects, and criticality of the failure, along with recommendations for preventive actions. The case study should present a chronological overview of the incident and the actions taken to resolve it.
+    # Prompt for FMECA and Incident Case Study Generation
 
-Requirements:
-FMECA Analysis:
+You are an experienced reliability engineer tasked with generating a comprehensive FMECA (Failure Modes, Effects, and Criticality Analysis) and an accompanying incident case study for a marine vessel that experienced a specific failure mode. Your analysis should be based solely on the facts provided in the given data, without introducing any external information or assumptions.
 
-Failure Mode: Clearly identify the failure mode, in this case, "Main Engine failure to start in astern."
-Root Causes: Analyze potential causes, including low starting air pressure, valve leakage, and control system malfunction.
-Failure Effects: Describe the system-wide effects of the failure, such as delayed maneuvers, risk of collision, or propulsion failure.
-Criticality (Risk Priority Number - RPN): Assign severity, occurrence, and detection ratings to evaluate the criticality of each failure cause.
-Recommended Actions: Provide corrective and preventive actions to reduce the risk of recurrence (e.g., regular maintenance, system upgrades, or crew training).
-Incident Case Study:
+## Context
+A marine vessel has experienced a Main Engine (ME) failure to start in astern during critical maneuvers. Your task is to analyze this incident in detail, providing both a FMECA and a case study.
 
-Incident Overview: Summarize the timeline of events, including key actions and observations during the failure.
-Root Cause Analysis: Detail the investigation process that uncovered the failure’s root cause (e.g., Valve 25 leakage, low starting air pressure).
-Corrective Actions: Outline the actions taken to rectify the issue and return the vessel to normal operations.
-Lessons Learned: Include recommendations for future preventive measures, focusing on improving system reliability and crew preparedness.
-Sample Output:
-Incident Overview: On September 17th, 2024, the UACC Marah experienced a Main Engine failure to start in astern while preparing for berthing at Port Yeosu, South Korea. This failure reoccurred on September 18th, 2024 during anchoring operations post-cargo discharge, requiring emergency anchoring procedures. The vessel was unable to respond to astern orders, leading to delayed operations and pilot cancellation.
+## FMEA (Failure Mode and Effects Analysis) Definitions
 
-Root Cause Analysis:
+Use the following definitions to identify and categorize failure modes, symptoms, effects, and causes:
 
-Low starting air pressure (below 15 bar) was identified as the primary cause preventing proper engine operation in astern mode.
-Valve 25, responsible for controlling air supply to puncture valves, exhibited leakage, further contributing to the engine’s inability to start astern.
-Corrective Actions:
+1. Failure Mode:
+   A specific combination of a component and a verb that describes how the component fails to perform its intended function. It is the precise way in which an item or system's ability to perform its required function is lost or degraded.
+   Example: "Piston ring fractures"
 
-Valve 25 was inspected and temporarily blanked to allow proper air supply to the puncture valves.
-All starting air valves were checked for leaks, and air connections were tested.
-The vessel’s main engine was restored to normal functionality, with plans to replace 4 new plunger and barrel assemblies at the next available opportunity.
-Lessons Learned:
+2. Failure Symptom:
+   An observable indicator that a failure mode is occurring or has occurred.
+   Example: "Increased vibration" or "Oil leakage"
 
-Regular maintenance of critical pneumatic components like Valve 25 should be prioritized to avoid future propulsion failures.
-Ensuring starting air pressure is maintained at optimal levels is critical for reliable engine operation in both ahead and astern modes.
+3. Failure Effect:
+   The resulting impact or consequence of a failure mode on the system's performance or operation.
+   Example: "Reduced engine power" or "Loss of hydraulic pressure"
 
+4. Failure Cause:
+   The underlying reason or mechanism that leads to the occurrence of a failure mode.
+   Example: "Wear and tear" or "Contaminated fuel"
+
+## Requirements
+
+### 1. FMECA Analysis
+Provide a detailed FMECA with the following components:
+
+a) Failure Mode:
+   - Clearly identify the failure mode as "Main Engine failure to start in astern."
+   - Describe this failure mode using a specific component-verb combination.
+
+b) Failure Symptom:
+   - List observable indicators of the failure mode.
+
+c) Failure Effects:
+   - Describe the system-wide effects of the failure. These may include, but are not limited to:
+     - Delayed maneuvers
+     - Risk of collision
+     - Propulsion failure
+   - Include any specific effects mentioned in the provided data
+
+d) Failure Causes:
+   - Analyze all potential causes mentioned in the data. These may include, but are not limited to:
+     - Low starting air pressure
+     - Valve leakage
+     - Control system malfunction
+
+e) Recommended Actions:
+   - Provide corrective and preventive actions to reduce the risk of recurrence
+   - Base these recommendations on the specific actions and lessons learned mentioned in the data
+
+### 2. Incident Case Study
+Create a detailed case study of the incident, including:
+
+a) Incident Overview:
+   - Provide a chronological summary of events
+   - Include key actions and observations during the failure
+   - Use specific dates, times, and locations mentioned in the data
+
+b) Root Cause Analysis:
+   - Detail the investigation process that uncovered the failure's root cause
+   - Focus on the specific findings mentioned in the data
+
+c) Corrective Actions:
+   - Outline the actions taken to rectify the issue and return the vessel to normal operations
+   - Include any temporary fixes and planned future repairs mentioned in the data
+
+d) Lessons Learned:
+   - Summarize recommendations for future preventive measures
+   - Focus on improving system reliability and crew preparedness based on the specific insights provided in the data
+
+## Instructions
+1. Carefully analyze the provided email thread or incident report.
+2. Extract all relevant data possible from the given information.
+3. Ensure your analysis is as detailed as possible, but base it solely on the facts presented in the data.
+4. Do not introduce any external information or make assumptions beyond what is explicitly stated in the provided data.
+5. Present your findings in a clear, well-structured format, using the following headings:
+   - Failure Mode
+   - Failure Symptom
+   - Failure Effect
+   - Failure Cause
+   - Recommended Actions
+   - Incident Overview
+   - Root Cause Analysis
+   - Corrective Actions
+   - Lessons Learned
+6. If any required information is missing from the provided data, indicate this in your analysis rather than making assumptions.
+
+Remember, as an experienced reliability engineer, your goal is to present a comprehensive understanding of the incident, its causes, effects, and the actions taken to address it, based strictly on the available information. Use your expertise to accurately categorize and analyze the failure according to the FMEA definitions provided.
     Email thread to analyze:
     {thread}
     """
