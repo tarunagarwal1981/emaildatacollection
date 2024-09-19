@@ -67,14 +67,12 @@ def separate_threads(content, model, temperature=0.7, top_p=1.0, frequency_penal
             )
             return response.choices[0].message.content.split("\n")
         elif model == "Claude":
-            response = anthropic_client.completion(
-                prompt=f"Human: {prompt.format(content=content)}\n\nAssistant:",
+            response = anthropic_client.completions.create(
+                prompt=f"{anthropic.HUMAN_PROMPT} {prompt.format(content=content)}{anthropic.AI_PROMPT}",
                 model="claude-2",
                 max_tokens_to_sample=1500,
                 temperature=temperature,
                 top_p=top_p,
-                frequency_penalty=frequency_penalty,
-                presence_penalty=presence_penalty
             )
             return response.completion.split("\n")
     except Exception as e:
@@ -118,14 +116,12 @@ def analyze_thread(thread, model, temperature=0.7, top_p=1.0, frequency_penalty=
         )
         return response.choices[0].message.content
     elif model == "Claude":
-        response = anthropic_client.completion(
-            prompt=f"Human: {prompt.format(thread=thread)}\n\nAssistant:",
+        response = anthropic_client.completions.create(
+            prompt=f"{anthropic.HUMAN_PROMPT} {prompt.format(thread=thread)}{anthropic.AI_PROMPT}",
             model="claude-2",
             max_tokens_to_sample=1000,
             temperature=temperature,
             top_p=top_p,
-            frequency_penalty=frequency_penalty,
-            presence_penalty=presence_penalty
         )
         return response.completion
 
@@ -146,8 +142,14 @@ def main():
         st.sidebar.header("LLM Parameters")
         temperature = st.sidebar.slider("Temperature", 0.0, 1.0, 0.7, 0.1)
         top_p = st.sidebar.slider("Top P", 0.0, 1.0, 1.0, 0.1)
-        frequency_penalty = st.sidebar.slider("Frequency Penalty", 0.0, 2.0, 0.0, 0.1)
-        presence_penalty = st.sidebar.slider("Presence Penalty", 0.0, 2.0, 0.0, 0.1)
+        
+        # Note: Claude API doesn't use frequency_penalty and presence_penalty
+        if model == "OpenAI":
+            frequency_penalty = st.sidebar.slider("Frequency Penalty", 0.0, 2.0, 0.0, 0.1)
+            presence_penalty = st.sidebar.slider("Presence Penalty", 0.0, 2.0, 0.0, 0.1)
+        else:
+            frequency_penalty = 0.0
+            presence_penalty = 0.0
 
         if st.button("Analyze"):
             with st.spinner("Separating threads..."):
