@@ -87,10 +87,10 @@ def analyze_thread(thread, temperature=0.7, top_p=1.0, frequency_penalty=0.0, pr
             {"role": "user", "content": prompt.format(thread=thread)}
         ],
         max_tokens=1000,
-        temperature=0.7,
-        top_p=1,
-        #frequency_penalty=frequency_penalty,
-        #presence_penalty=presence_penalty
+        temperature=temperature,
+        top_p=top_p,
+        frequency_penalty=frequency_penalty,
+        presence_penalty=presence_penalty
     )
 
     return response.choices[0].message.content
