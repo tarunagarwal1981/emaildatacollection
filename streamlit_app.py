@@ -36,16 +36,16 @@ def read_docx(file):
         full_text.append(para.text)
     return "\n".join(full_text)
 
-def separate_threads(content, model, user_input, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
+def separate_content(content, model, user_input, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
     max_tokens = 4000
     if len(content) > max_tokens * 4:
         content = content[:max_tokens * 4]
         st.warning("Content was truncated due to length. Analysis may be incomplete.")
 
     prompt = f"""
-    The following content may contain multiple email threads related to machinery defects, incidents, or troubles. 
-    In case multiple threads are there please separate these threads and return them as a numbered list. Each item in the list should be a complete thread.
-    Use your intelligence to identify where one thread ends and another begins.
+    The following content is from a DOCX file and may contain information about machinery defects, incidents, or troubles. 
+    Please separate this content into logical sections or topics. Return them as a numbered list. Each item in the list should be a complete, coherent section.
+    Use your intelligence to identify where one section or topic ends and another begins.
 
     Additional instructions from the user:
     {user_input}
@@ -82,9 +82,9 @@ def separate_threads(content, model, user_input, temperature=0.7, top_p=1.0, fre
         st.error(f"Error in API request: {str(e)}")
         return []
 
-def analyze_thread(thread, model, user_input, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
+def analyze_section(section, model, user_input, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
     prompt = f"""
-    You are an experienced reliability engineer. Analyze the following email thread related to machinery defects, incidents, or troubles, and format the data under these headings:
+    You are an experienced reliability engineer. Analyze the following section of content related to machinery or equipment, and format the data under these headings:
     - Failure Mode
     - Failure Symptom
     - Failure Effect
@@ -100,13 +100,13 @@ def analyze_thread(thread, model, user_input, temperature=0.7, top_p=1.0, freque
 
     Failure Cause: The underlying reason or mechanism that leads to the occurrence of a failure mode. (Example: "Wear and tear" or "Contaminated fuel")
 
-    Create a sort of detailed incident case study out of each thread. Also include timeline of events if it is available in mail threads. Extract as much meaningful data as possible from the email threads and put it in the case study.
+    Create a detailed analysis of the content. If possible, include a timeline of events. Extract as much meaningful data as possible from the content and include it in your analysis.
 
     Additional instructions from the user:
     {user_input}
 
-    Email thread to analyze:
-    {thread}
+    Content to analyze:
+    {section}
     """
 
     if model == "OpenAI":
@@ -134,7 +134,7 @@ def analyze_thread(thread, model, user_input, temperature=0.7, top_p=1.0, freque
         return response.completion
 
 def main():
-    st.title("Multi-Thread FMEA Analyzer")
+    st.title("DOCX Content Analyzer with FMEA")
 
     # Add model selection
     model = st.sidebar.selectbox("Select Model", ["OpenAI", "Claude"])
@@ -164,17 +164,17 @@ def main():
             presence_penalty = 0.0
 
         if st.button("Analyze"):
-            with st.spinner("Separating threads..."):
-                threads = separate_threads(content, model, user_input, temperature, top_p, frequency_penalty, presence_penalty)
+            with st.spinner("Separating content into sections..."):
+                sections = separate_content(content, model, user_input, temperature, top_p, frequency_penalty, presence_penalty)
                 
-            st.write(f"Found {len(threads)} threads.")
+            st.write(f"Found {len(sections)} sections.")
             
-            for i, thread in enumerate(threads, 1):
-                st.subheader(f"Thread {i}")
-                st.write(thread)
+            for i, section in enumerate(sections, 1):
+                st.subheader(f"Section {i}")
+                st.write(section)
                 
-                with st.spinner(f"Analyzing thread {i}..."):
-                    analysis = analyze_thread(thread, model, user_input, temperature, top_p, frequency_penalty, presence_penalty)
+                with st.spinner(f"Analyzing section {i}..."):
+                    analysis = analyze_section(section, model, user_input, temperature, top_p, frequency_penalty, presence_penalty)
                     st.write("FMEA Analysis:")
                     st.write(analysis)
                 
