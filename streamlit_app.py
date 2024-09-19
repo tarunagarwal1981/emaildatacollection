@@ -26,6 +26,12 @@ def read_docx(file):
     return "\n".join(full_text)
 
 def separate_threads(content):
+    # Truncate content if it's too long
+    max_tokens = 4000  # Adjust this value as needed
+    if len(content) > max_tokens * 4:  # Assuming 1 token ≈ 4 characters
+        content = content[:max_tokens * 4]
+        st.warning("Content was truncated due to length. Analysis may be incomplete.")
+
     prompt = """
     The following content contains multiple email threads related to machinery defects, incidents, or troubles. 
     Please separate these threads and return them as a numbered list. Each item in the list should be a complete thread.
@@ -35,16 +41,19 @@ def separate_threads(content):
     {content}
     """
 
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt.format(content=content)}
-        ],
-        max_tokens=1500
-    )
-
-    return response.choices[0].message.content.split("\n")
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt.format(content=content)}
+            ],
+            max_tokens=1500
+        )
+        return response.choices[0].message.content.split("\n")
+    except openai.error.InvalidRequestError as e:
+        st.error(f"Error in API request: {str(e)}")
+        return []
 
 def analyze_thread(thread):
     prompt = """
