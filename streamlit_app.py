@@ -96,7 +96,7 @@ def analyze_thread(thread, model, temperature=0.7, top_p=1.0, frequency_penalty=
     Failure Effect: The resulting impact or consequence of a failure mode on the system's performance or operation. (Example: "Reduced engine power" or "Loss of hydraulic pressure")
 
     Failure Cause: The underlying reason or mechanism that leads to the occurrence of a failure mode. (Example: "Wear and tear" or "Contaminated fuel")
-    Create a sort of detailed incident case study out of each thread. Also include timeline of events if it is available in mail threads. Extract as much meaningful data as possible from the email threads and put it in the case study.
+    Create a sort of detailed incident case study out of each thread. Also include timeline of events if it is available in mail threads. Extract as much meaningful data as possible from the email threads and put it in the case study. Always include the equipment name in your analysis and actions taken if available.
     Email thread to analyze:
     {thread}
     """
