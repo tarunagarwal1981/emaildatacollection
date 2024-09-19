@@ -1,56 +1,119 @@
 import streamlit as st
-from openai import OpenAI
+import docx
+import openai
+import os
+from dotenv import load_dotenv
 
-# Show title and description.
-st.title("💬 Chatbot")
-st.write(
-    "This is a simple chatbot that uses OpenAI's GPT-3.5 model to generate responses. "
-    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
-    "You can also learn how to build this app step by step by [following our tutorial](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)."
-)
+# Load environment variables
+load_dotenv()
+# Initialize OpenAI API
+#def get_api_key():
+#    if 'openai' in st.secrets:
+#        return st.secrets['openai']['api_key']
+#    api_key = os.getenv('OPENAI_API_KEY')
+#    if api_key is None:
+#        raise ValueError("API key not found. Set OPENAI_API_KEY as an environment variable.")
+#    return api_key
 
-# Ask user for their OpenAI API key via `st.text_input`.
-# Alternatively, you can store the API key in `./.streamlit/secrets.toml` and access it
-# via `st.secrets`, see https://docs.streamlit.io/develop/concepts/connections/secrets-management
-openai_api_key = st.text_input("OpenAI API Key", type="password")
-if not openai_api_key:
-    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
-else:
+#openai.api_key = get_api_key()
 
-    # Create an OpenAI client.
-    client = OpenAI(api_key=openai_api_key)
+def get_api_key():
+    if 'anthropic' in st.secrets:
+        return st.secrets['anthropic']['api_key']
+    api_key = os.getenv('ANTHROPIC_API_KEY')
+    if api_key is None:
+        raise ValueError("API key not found. Set ANTHROPIC_API_KEY as an environment variable.")
+    return api_key
 
-    # Create a session state variable to store the chat messages. This ensures that the
-    # messages persist across reruns.
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+client = anthropic.Anthropic(api_key=get_api_key())
 
-    # Display the existing chat messages via `st.chat_message`.
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+def read_docx(file):
+    doc = docx.Document(file)
+    full_text = []
+    for para in doc.paragraphs:
+        full_text.append(para.text)
+    return "\n".join(full_text)
 
-    # Create a chat input field to allow the user to enter a message. This will display
-    # automatically at the bottom of the page.
-    if prompt := st.chat_input("What is up?"):
+def separate_threads(content):
+    prompt = """
+    The following content contains multiple email threads related to machinery defects, incidents, or troubles. 
+    Please separate these threads and return them as a numbered list. Each item in the list should be a complete thread.
+    Use your intelligence to identify where one thread ends and another begins.
 
-        # Store and display the current prompt.
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
+    Content to separate:
+    {content}
+    """
 
-        # Generate a response using the OpenAI API.
-        stream = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages
-            ],
-            stream=True,
-        )
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt.format(content=content)}
+        ],
+        max_tokens=1500
+    )
 
-        # Stream the response to the chat using `st.write_stream`, then store it in 
-        # session state.
-        with st.chat_message("assistant"):
-            response = st.write_stream(stream)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+    return response.choices[0].message.content.split("\n")
+
+def analyze_thread(thread):
+    prompt = """
+    You are an experienced reliability engineer. Analyze the following email thread related to machinery defects, incidents, or troubles, and format the data under these headings:
+    - Failure Mode
+    - Failure Symptom
+    - Failure Effect
+    - Failure Cause
+
+    Use these FMEA (Failure Mode and Effects Analysis) definitions:
+
+    Failure Mode: A specific combination of a component and a verb that describes how the component fails to perform its intended function. It is the precise way in which an item or system's ability to perform its required function is lost or degraded. (Example: "Piston ring fractures")
+
+    Failure Symptom: An observable indicator that a failure mode is occurring or has occurred. (Example: "Increased vibration" or "Oil leakage")
+
+    Failure Effect: The resulting impact or consequence of a failure mode on the system's performance or operation. (Example: "Reduced engine power" or "Loss of hydraulic pressure")
+
+    Failure Cause: The underlying reason or mechanism that leads to the occurrence of a failure mode. (Example: "Wear and tear" or "Contaminated fuel")
+
+    Email thread to analyze:
+    {thread}
+    """
+
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt.format(thread=thread)}
+        ],
+        max_tokens=1000
+    )
+
+    return response.choices[0].message.content
+
+def main():
+    st.title("Multi-Thread FMEA Analyzer")
+
+    uploaded_file = st.file_uploader("Choose a DOCX file", type="docx")
+
+    if uploaded_file is not None:
+        content = read_docx(uploaded_file)
+        st.write("File contents:")
+        st.write(content)
+
+        if st.button("Analyze"):
+            with st.spinner("Separating threads..."):
+                threads = separate_threads(content)
+                
+            st.write(f"Found {len(threads)} threads.")
+            
+            for i, thread in enumerate(threads, 1):
+                st.subheader(f"Thread {i}")
+                st.write(thread)
+                
+                with st.spinner(f"Analyzing thread {i}..."):
+                    analysis = analyze_thread(thread)
+                    st.write("FMEA Analysis:")
+                    st.write(analysis)
+                
+                st.markdown("---")
+
+if __name__ == "__main__":
+    main()
