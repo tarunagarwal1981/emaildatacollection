@@ -38,23 +38,39 @@ def read_docx(file):
 
 def analyze_thread(thread, model, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
     prompt = f"""
-    You are an experienced reliability engineer. Analyze the following email thread related to machinery defects, incidents, or troubles, and format the data under these headings:
-    - Failure Mode
-    - Failure Symptom
-    - Failure Effect
-    - Failure Cause
+    Prompt for FMECA and Incident Case Study Generation
+Context: You are tasked with generating a detailed FMECA (Failure Modes, Effects, and Criticality Analysis) for a marine vessel experiencing a specific failure mode, accompanied by an incident case study detailing the failure, its root causes, and corrective actions taken. The case involves the vessel's Main Engine (ME) failure to start in astern, observed during critical maneuvers. The FMECA should focus on identifying the root causes, effects, and criticality of the failure, along with recommendations for preventive actions. The case study should present a chronological overview of the incident and the actions taken to resolve it.
 
-    Use these FMEA (Failure Mode and Effects Analysis) definitions:
+Requirements:
+FMECA Analysis:
 
-    Failure Mode: A specific combination of a component and a verb that describes how the component fails to perform its intended function. It is the precise way in which an item or system's ability to perform its required function is lost or degraded. (Example: "Piston ring fractures")
+Failure Mode: Clearly identify the failure mode, in this case, "Main Engine failure to start in astern."
+Root Causes: Analyze potential causes, including low starting air pressure, valve leakage, and control system malfunction.
+Failure Effects: Describe the system-wide effects of the failure, such as delayed maneuvers, risk of collision, or propulsion failure.
+Criticality (Risk Priority Number - RPN): Assign severity, occurrence, and detection ratings to evaluate the criticality of each failure cause.
+Recommended Actions: Provide corrective and preventive actions to reduce the risk of recurrence (e.g., regular maintenance, system upgrades, or crew training).
+Incident Case Study:
 
-    Failure Symptom: An observable indicator that a failure mode is occurring or has occurred. (Example: "Increased vibration" or "Oil leakage")
+Incident Overview: Summarize the timeline of events, including key actions and observations during the failure.
+Root Cause Analysis: Detail the investigation process that uncovered the failure’s root cause (e.g., Valve 25 leakage, low starting air pressure).
+Corrective Actions: Outline the actions taken to rectify the issue and return the vessel to normal operations.
+Lessons Learned: Include recommendations for future preventive measures, focusing on improving system reliability and crew preparedness.
+Sample Output:
+Incident Overview: On September 17th, 2024, the UACC Marah experienced a Main Engine failure to start in astern while preparing for berthing at Port Yeosu, South Korea. This failure reoccurred on September 18th, 2024 during anchoring operations post-cargo discharge, requiring emergency anchoring procedures. The vessel was unable to respond to astern orders, leading to delayed operations and pilot cancellation.
 
-    Failure Effect: The resulting impact or consequence of a failure mode on the system's performance or operation. (Example: "Reduced engine power" or "Loss of hydraulic pressure")
+Root Cause Analysis:
 
-    Failure Cause: The underlying reason or mechanism that leads to the occurrence of a failure mode. (Example: "Wear and tear" or "Contaminated fuel")
+Low starting air pressure (below 15 bar) was identified as the primary cause preventing proper engine operation in astern mode.
+Valve 25, responsible for controlling air supply to puncture valves, exhibited leakage, further contributing to the engine’s inability to start astern.
+Corrective Actions:
 
-    Create a detailed incident case study out of the email thread. Also include a timeline of events if it is available in the email thread. Extract as much meaningful data as possible from the email thread and include it in your analysis.
+Valve 25 was inspected and temporarily blanked to allow proper air supply to the puncture valves.
+All starting air valves were checked for leaks, and air connections were tested.
+The vessel’s main engine was restored to normal functionality, with plans to replace 4 new plunger and barrel assemblies at the next available opportunity.
+Lessons Learned:
+
+Regular maintenance of critical pneumatic components like Valve 25 should be prioritized to avoid future propulsion failures.
+Ensuring starting air pressure is maintained at optimal levels is critical for reliable engine operation in both ahead and astern modes.
 
     Email thread to analyze:
     {thread}
