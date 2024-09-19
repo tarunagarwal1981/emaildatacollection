@@ -6,24 +6,24 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-# Initialize OpenAI API
-#def get_api_key():
-#    if 'openai' in st.secrets:
-#        return st.secrets['openai']['api_key']
-#    api_key = os.getenv('OPENAI_API_KEY')
-#    if api_key is None:
-#        raise ValueError("API key not found. Set OPENAI_API_KEY as an environment variable.")
-#    return api_key
-
-#openai.api_key = get_api_key()
-
+#Initialize OpenAI API
 def get_api_key():
-    if 'anthropic' in st.secrets:
-        return st.secrets['anthropic']['api_key']
-    api_key = os.getenv('ANTHROPIC_API_KEY')
+    if 'openai' in st.secrets:
+        return st.secrets['openai']['api_key']
+    api_key = os.getenv('OPENAI_API_KEY')
     if api_key is None:
-        raise ValueError("API key not found. Set ANTHROPIC_API_KEY as an environment variable.")
+        raise ValueError("API key not found. Set OPENAI_API_KEY as an environment variable.")
     return api_key
+
+openai.api_key = get_api_key()
+
+#def get_api_key():
+#    if 'anthropic' in st.secrets:
+ #       return st.secrets['anthropic']['api_key']
+  #  api_key = os.getenv('ANTHROPIC_API_KEY')
+   # if api_key is None:
+    #    raise ValueError("API key not found. Set ANTHROPIC_API_KEY as an environment variable.")
+   # return api_key
 
 client = anthropic.Anthropic(api_key=get_api_key())
 
