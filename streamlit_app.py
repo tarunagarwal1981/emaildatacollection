@@ -36,55 +36,9 @@ def read_docx(file):
         full_text.append(para.text)
     return "\n".join(full_text)
 
-def separate_content(content, model, user_input, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
-    max_tokens = 4000
-    if len(content) > max_tokens * 4:
-        content = content[:max_tokens * 4]
-        st.warning("Content was truncated due to length. Analysis may be incomplete.")
-
+def analyze_thread(thread, model, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
     prompt = f"""
-    The following content is from a DOCX file and may contain information about machinery defects, incidents, or troubles. 
-    Please separate this content into logical sections or topics. Return them as a numbered list. Each item in the list should be a complete, coherent section.
-    Use your intelligence to identify where one section or topic ends and another begins.
-
-    Additional instructions from the user:
-    {user_input}
-
-    Content to separate:
-    {content}
-    """
-
-    try:
-        if model == "OpenAI":
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=1500,
-                temperature=temperature,
-                top_p=top_p,
-                frequency_penalty=frequency_penalty,
-                presence_penalty=presence_penalty
-            )
-            return response.choices[0].message.content.split("\n")
-        elif model == "Claude":
-            response = anthropic_client.completions.create(
-                prompt=f"{anthropic.HUMAN_PROMPT} {prompt}{anthropic.AI_PROMPT}",
-                model="claude-2",
-                max_tokens_to_sample=1500,
-                temperature=temperature,
-                top_p=top_p,
-            )
-            return response.completion.split("\n")
-    except Exception as e:
-        st.error(f"Error in API request: {str(e)}")
-        return []
-
-def analyze_section(section, model, user_input, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
-    prompt = f"""
-    You are an experienced reliability engineer. Analyze the following section of content related to machinery or equipment, and format the data under these headings:
+    You are an experienced reliability engineer. Analyze the following email thread related to machinery defects, incidents, or troubles, and format the data under these headings:
     - Failure Mode
     - Failure Symptom
     - Failure Effect
@@ -100,13 +54,10 @@ def analyze_section(section, model, user_input, temperature=0.7, top_p=1.0, freq
 
     Failure Cause: The underlying reason or mechanism that leads to the occurrence of a failure mode. (Example: "Wear and tear" or "Contaminated fuel")
 
-    Create a detailed analysis of the content. If possible, include a timeline of events. Extract as much meaningful data as possible from the content and include it in your analysis.
+    Create a detailed incident case study out of the email thread. Also include a timeline of events if it is available in the email thread. Extract as much meaningful data as possible from the email thread and include it in your analysis.
 
-    Additional instructions from the user:
-    {user_input}
-
-    Content to analyze:
-    {section}
+    Email thread to analyze:
+    {thread}
     """
 
     if model == "OpenAI":
@@ -134,20 +85,16 @@ def analyze_section(section, model, user_input, temperature=0.7, top_p=1.0, freq
         return response.completion
 
 def main():
-    st.title("DOCX Content Analyzer with FMEA")
+    st.title("Single Email Thread FMEA Analyzer")
 
     # Add model selection
     model = st.sidebar.selectbox("Select Model", ["OpenAI", "Claude"])
 
-    # Add user input text area
-    user_input = st.text_area("Additional Instructions or Context", 
-                              "Please provide any additional instructions or context for the analysis here.")
-
-    uploaded_file = st.file_uploader("Choose a DOCX file", type="docx")
+    uploaded_file = st.file_uploader("Choose a DOCX file containing a single email thread", type="docx")
 
     if uploaded_file is not None:
         content = read_docx(uploaded_file)
-        st.write("File contents:")
+        st.write("Email thread content:")
         st.write(content)
 
         # Add sliders for LLM parameters
@@ -164,21 +111,10 @@ def main():
             presence_penalty = 0.0
 
         if st.button("Analyze"):
-            with st.spinner("Separating content into sections..."):
-                sections = separate_content(content, model, user_input, temperature, top_p, frequency_penalty, presence_penalty)
-                
-            st.write(f"Found {len(sections)} sections.")
-            
-            for i, section in enumerate(sections, 1):
-                st.subheader(f"Section {i}")
-                st.write(section)
-                
-                with st.spinner(f"Analyzing section {i}..."):
-                    analysis = analyze_section(section, model, user_input, temperature, top_p, frequency_penalty, presence_penalty)
-                    st.write("FMEA Analysis:")
-                    st.write(analysis)
-                
-                st.markdown("---")
+            with st.spinner("Analyzing email thread..."):
+                analysis = analyze_thread(content, model, temperature, top_p, frequency_penalty, presence_penalty)
+                st.subheader("FMEA Analysis:")
+                st.write(analysis)
 
 if __name__ == "__main__":
     main()
